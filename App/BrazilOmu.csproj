@@ -9,6 +9,9 @@
     <SingleProject>true</SingleProject>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <MtouchLink>None</MtouchLink>
+    <PublishTrimmed>false</PublishTrimmed>
+    <TrimMode>none</TrimMode>
 
     <ApplicationTitle>Brazil Omu</ApplicationTitle>
     <ApplicationId>com.brazilomu.app</ApplicationId>
