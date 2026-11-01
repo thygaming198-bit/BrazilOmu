@@ -17,10 +17,9 @@
 
     <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
   </PropertyGroup>
-    <ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.Maui.Controls" Version="10.0.110" />
-    <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#07061A" />
-    <MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#07061A" BaseSize="128,128" />
   </ItemGroup>
 
 </Project>
