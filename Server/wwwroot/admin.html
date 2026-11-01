@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Brazil Omu Admin</title>
+<style>
+  :root{--bg:#07061a;--card:#100c24;--line:#2a1d52;--p:#9b30ff;--p2:#7b1fe0;--txt:#f2eefc;--mut:#9a90b8;--ok:#2ecc71;--bad:#ff5c7a}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:1000px;margin:0 auto;padding:20px}
+  h1{letter-spacing:2px;margin:0 0 4px}
+  h1 span{color:var(--p)}
+  .sub{color:var(--mut);font-size:13px;margin-bottom:20px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:18px}
+  label{display:block;font-size:12px;color:var(--mut);margin:0 0 6px;text-transform:uppercase;letter-spacing:1px}
+  input{width:100%;background:#050412;border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:11px;font-size:14px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;align-items:end}
+  button{background:linear-gradient(90deg,var(--p2),var(--p));color:#fff;border:0;border-radius:10px;padding:11px 16px;font-weight:700;cursor:pointer;font-size:13px}
+  button.sm{padding:6px 10px;font-size:12px;margin:2px}
+  button.red{background:#c0304f}
+  button.gray{background:#3a2f63}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line)}
+  th{color:var(--mut);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:1px}
+  code{background:#050412;padding:3px 7px;border-radius:6px;color:#d9b8ff;user-select:all}
+  .on{color:var(--ok)} .off{color:var(--bad)}
+  .scroll{overflow-x:auto}
+  #out{white-space:pre-wrap;font-family:monospace;color:#7dff9b;font-size:13px;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>BRAZIL <span>OMU</span> ADMIN</h1>
+  <div class="sub">License key management</div>
+
+  <div class="card" id="loginCard">
+    <label>Admin password</label>
+    <div class="grid">
+      <input id="token" type="password" placeholder="Enter admin password">
+      <button onclick="login()">SIGN IN</button>
+    </div>
+  </div>
+
+  <div id="panel" style="display:none">
+    <div class="card">
+      <h3 style="margin-top:0">Generate keys</h3>
+      <div class="grid">
+        <div><label>Label (customer)</label><input id="label" placeholder="e.g. John"></div>
+        <div><label>Valid days</label><input id="days" type="number" value="30" min="1"></div>
+        <div><label>Max devices</label><input id="devs" type="number" value="1" min="1"></div>
+        <div><label>How many</label><input id="count" type="number" value="1" min="1" max="100"></div>
+        <button onclick="gen()">GENERATE</button>
+      </div>
+      <div id="out"></div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0">All keys</h3>
+      <div class="scroll">
+      <table>
+        <thead><tr><th>Key</th><th>Label</th><th>Expires</th><th>Devices</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let T = sessionStorage.getItem('bo_admin') || '';
+const H = () => ({'Content-Type':'application/json','X-Admin-Token':T});
+
+async function api(method, url, body){
+  const r = await fetch(url,{method,headers:H(),body:body?JSON.stringify(body):undefined});
+  if(r.status===401){ logout(); throw new Error('Unauthorized'); }
+  return r.status===204 ? null : r.json().catch(()=>null);
+}
+function logout(){ sessionStorage.removeItem('bo_admin'); T=''; document.getElementById('panel').style.display='none'; document.getElementById('loginCard').style.display='block'; }
+async function login(){
+  T = document.getElementById('token').value;
+  const r = await fetch('/api/admin/keys',{headers:H()});
+  if(r.status===401){ alert('Wrong admin password'); return; }
+  sessionStorage.setItem('bo_admin',T);
+  show();
+}
+function show(){
+  document.getElementById('loginCard').style.display='none';
+  document.getElementById('panel').style.display='block';
+  load();
+}
+async function load(){
+  const list = await api('GET','/api/admin/keys');
+  const rows = document.getElementById('rows'); rows.innerHTML='';
+  const now = new Date();
+  for(const k of list){
+    const exp = new Date(k.expiresAt);
+    const expired = exp < now;
+    const status = !k.isActive ? '<span class="off">Suspended</span>' : expired ? '<span class="off">Expired</span>' : '<span class="on">Active</span>';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td><code>${k.key}</code></td><td>${esc(k.label)}</td><td>${exp.toLocaleDateString()}</td>
+      <td>${k.devices}/${k.maxDevices}</td><td>${status}</td>
+      <td>
+        <button class="sm gray" onclick="toggle(${k.id})">${k.isActive?'Suspend':'Activate'}</button>
+        <button class="sm gray" onclick="extend(${k.id})">+30d</button>
+        <button class="sm gray" onclick="resetDev(${k.id})">Reset devices</button>
+        <button class="sm red" onclick="del(${k.id})">Delete</button>
+      </td>`;
+    rows.appendChild(tr);
+  }
+}
+function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+async function gen(){
+  const keys = await api('POST','/api/admin/keys',{
+    label:document.getElementById('label').value,
+    days:+document.getElementById('days').value,
+    maxDevices:+document.getElementById('devs').value,
+    count:+document.getElementById('count').value
+  });
+  document.getElementById('out').textContent = 'Created:\n' + keys.join('\n');
+  load();
+}
+async function toggle(id){ await api('POST',`/api/admin/keys/${id}/toggle`); load(); }
+async function extend(id){ await api('POST',`/api/admin/keys/${id}/extend/30`); load(); }
+async function resetDev(id){ if(confirm('Remove all registered devices for this key?')){ await api('POST',`/api/admin/keys/${id}/reset-devices`); load(); } }
+async function del(id){ if(confirm('Delete this key permanently?')){ await api('DELETE',`/api/admin/keys/${id}`); load(); } }
+if(T) show();
+</script>
+</body>
+</html>
