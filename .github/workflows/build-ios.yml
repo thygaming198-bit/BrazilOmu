@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-         runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
 
@@ -30,13 +30,7 @@ jobs:
 
       - name: Build (no code signing)
         run: |
-          dotnet build App/BrazilOmu.csproj \
-            -f net10.0-ios -c Release \
-            -p:RuntimeIdentifier=ios-arm64 \
-            -p:ValidateXcodeVersion=false \
-            -p:EnableCodeSigning=false \
-            -p:CodesignRequireProvisioningProfile=false \
-            -p:EnableAssemblyILStripping=false
+          dotnet build App/BrazilOmu.csproj -f net10.0-ios -c Release -p:RuntimeIdentifier=ios-arm64 -p:ValidateXcodeVersion=false -p:EnableCodeSigning=false -p:CodesignRequireProvisioningProfile=false -p:EnableAssemblyILStripping=false -v:minimal
 
       - name: Package IPA
         run: |
