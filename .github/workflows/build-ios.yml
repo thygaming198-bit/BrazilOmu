@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
 
@@ -15,24 +15,27 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_15.4.app || true
+      - name: Show Xcode versions
+        run: |
+          ls /Applications | grep -i xcode || true
+          xcodebuild -version
 
       - name: Install MAUI workload
         run: dotnet workload install maui-ios
 
       - name: Build (no code signing)
         run: |
-          dotnet build BrazilOmu/App/BrazilOmu.csproj \
+          dotnet build App/BrazilOmu.csproj \
             -f net8.0-ios -c Release \
             -p:RuntimeIdentifier=ios-arm64 \
+            -p:ValidateXcodeVersion=false \
             -p:EnableCodeSigning=false \
             -p:CodesignRequireProvisioningProfile=false \
             -p:EnableAssemblyILStripping=false
 
       - name: Package IPA
         run: |
-          APP=$(find BrazilOmu/App/bin/Release -name "*.app" -type d | head -n 1)
+          APP=$(find App/bin/Release -name "*.app" -type d | head -n 1)
           echo "Found app: $APP"
           mkdir -p Payload
           cp -R "$APP" Payload/
